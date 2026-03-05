@@ -67,7 +67,7 @@ export default function Home() {
             fontWeight: 700,
             border: "1px solid #ddd",
             borderRadius: 10,
-            background: view === "singles" ? "#eee" : "white",
+            background: view === "singles" ? "#eee" : "black",
           }}
         >
           Singles
@@ -79,7 +79,7 @@ export default function Home() {
             fontWeight: 700,
             border: "1px solid #ddd",
             borderRadius: 10,
-            background: view === "doubles" ? "#eee" : "white",
+            background: view === "doubles" ? "#eee" : "black",
           }}
         >
           Doubles
