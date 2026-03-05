@@ -1,65 +1,131 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import Link from "next/link";
+
+type Player = {
+  id: string;
+  name: string;
+  singles_rating: number;
+  doubles_rating: number;
+  games_played: number;
+  wins: number;
+  losses: number;
+  tier: number | null;
+};
 
 export default function Home() {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [view, setView] = useState<"singles" | "doubles">("singles");
+
+  async function load() {
+    setLoading(true);
+
+    const orderCol = view === "singles" ? "singles_rating" : "doubles_rating";
+
+    const { data, error } = await supabase
+      .from("players")
+      .select("id,name,singles_rating,doubles_rating,games_played,wins,losses,tier")
+      .order(orderCol, { ascending: false })
+      .order("games_played", { ascending: false });
+
+    if (!error && data) setPlayers(data as Player[]);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    load();
+
+    const channel = supabase
+      .channel("players-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "players" }, () => load())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
+
+  const title = useMemo(
+    () => (view === "singles" ? "Singles Leaderboard" : "Doubles Leaderboard"),
+    [view]
+  );
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main style={{ maxWidth: 900, margin: "24px auto", padding: 16 }}>
+      <h1 style={{ fontSize: 28, fontWeight: 700 }}>🏓 Frat Ping Pong Elo</h1>
+
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
+        <button
+          onClick={() => setView("singles")}
+          style={{
+            padding: "8px 12px",
+            fontWeight: 700,
+            border: "1px solid #ddd",
+            borderRadius: 10,
+            background: view === "singles" ? "#eee" : "white",
+          }}
+        >
+          Singles
+        </button>
+        <button
+          onClick={() => setView("doubles")}
+          style={{
+            padding: "8px 12px",
+            fontWeight: 700,
+            border: "1px solid #ddd",
+            borderRadius: 10,
+            background: view === "doubles" ? "#eee" : "white",
+          }}
+        >
+          Doubles
+        </button>
+
+        <div style={{ marginLeft: "auto", opacity: 0.85 }}>
+          <Link href="/submit">Submit a match →</Link>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </div>
+
+      <h2 style={{ marginTop: 16, fontSize: 18 }}>{title}</h2>
+
+      {loading ? (
+        <p>Loading…</p>
+      ) : (
+        <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 12 }}>
+          <thead>
+            <tr style={{ textAlign: "left" }}>
+              <th style={{ padding: 8 }}>Rank</th>
+              <th style={{ padding: 8 }}>Player</th>
+              <th style={{ padding: 8 }}>Elo</th>
+              <th style={{ padding: 8 }}>W–L</th>
+              <th style={{ padding: 8 }}>Games</th>
+            </tr>
+          </thead>
+          <tbody>
+            {players.map((p, i) => {
+              const rating = view === "singles" ? p.singles_rating : p.doubles_rating;
+
+              return (
+                <tr key={p.id} style={{ borderTop: "1px solid #eee" }}>
+                  <td style={{ padding: 8 }}>{i + 1}</td>
+                  <td style={{ padding: 8 }}>
+                    <Link href={`/players/${p.id}`}>{p.name}</Link>
+                  </td>
+                  <td style={{ padding: 8, fontWeight: 700 }}>{rating}</td>
+                  <td style={{ padding: 8 }}>
+                    {p.wins}–{p.losses}
+                  </td>
+                  <td style={{ padding: 8 }}>{p.games_played}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </main>
   );
 }
