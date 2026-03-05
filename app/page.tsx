@@ -87,6 +87,7 @@ export default function Home() {
 
         <div style={{ marginLeft: "auto", opacity: 0.85 }}>
           <Link href="/submit">Submit a match →</Link>
+          <Link href="/matches" style={{ marginLeft: 12 }}>View matches →</Link>
         </div>
       </div>
 
