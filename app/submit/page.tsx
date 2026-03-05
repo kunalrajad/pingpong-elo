@@ -62,8 +62,6 @@ export default function Submit() {
     setScoreA("");
     setScoreB("");
 
-    // Nice defaults: doubles a bit less swingy
-    setKFactor(matchType === "doubles" ? 24 : 32);
   }, [matchType]);
 
   const a1 = useMemo(() => players.find((p) => p.id === playerAId), [players, playerAId]);
@@ -129,7 +127,7 @@ export default function Submit() {
         }
 
         // Build payload based on match type
-        let payload: any = { matchType, playerAId, playerBId, kFactor };
+        let payload: any = { matchType, playerAId, playerBId  };
 
         if (matchType === "singles") {
         if (!winnerId) {
@@ -395,15 +393,6 @@ export default function Submit() {
           </label>
         </div>
 
-        <label>
-          K-factor (how swingy ratings are)
-          <input
-            type="number"
-            value={kFactor}
-            onChange={(e) => setKFactor(parseInt(e.target.value || "32", 10))}
-            style={{ width: "100%", padding: 10 }}
-          />
-        </label>
 
         <button onClick={submit} style={{ padding: 12, fontWeight: 700 }}>
           Record Match

@@ -39,7 +39,9 @@ export async function POST(req: Request) {
   const body = (await req.json()) as Body;
 
   const matchType = body.matchType ?? "singles";
-  const kFactor = body.kFactor ?? (matchType === "doubles" ? 24 : 32);
+  const SINGLES_K = 32;
+  const DOUBLES_K = 24;
+  const kFactor = matchType === "doubles" ? DOUBLES_K : SINGLES_K;
 
   const { playerAId, playerBId } = body;
 
