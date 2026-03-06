@@ -9,16 +9,28 @@ type Player = {
   name: string;
   singles_rating: number;
   doubles_rating: number;
+
+  // overall
   games_played: number;
   wins: number;
   losses: number;
+
+  // singles-specific
+  singles_wins: number;
+  singles_losses: number;
+  singles_games: number;
+
+  // doubles-specific
+  doubles_wins: number;
+  doubles_losses: number;
+  doubles_games: number;
+
   tier: number | null;
 };
 
 export default function Home() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [view, setView] = useState<"singles" | "doubles">("singles");
 
   async function load() {
@@ -28,11 +40,29 @@ export default function Home() {
 
     const { data, error } = await supabase
       .from("players")
-      .select("id,name,singles_rating,doubles_rating,games_played,wins,losses,tier")
+      .select(`
+        id,
+        name,
+        singles_rating,
+        doubles_rating,
+        games_played,
+        wins,
+        losses,
+        singles_wins,
+        singles_losses,
+        singles_games,
+        doubles_wins,
+        doubles_losses,
+        doubles_games,
+        tier
+      `)
       .order(orderCol, { ascending: false })
-      .order("games_played", { ascending: false });
+      .order("name", { ascending: true });
 
-    if (!error && data) setPlayers(data as Player[]);
+    if (!error && data) {
+      setPlayers(data as Player[]);
+    }
+
     setLoading(false);
   }
 
@@ -41,7 +71,11 @@ export default function Home() {
 
     const channel = supabase
       .channel("players-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "players" }, () => load())
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "players" },
+        () => load()
+      )
       .subscribe();
 
     return () => {
@@ -63,31 +97,38 @@ export default function Home() {
         <button
           onClick={() => setView("singles")}
           style={{
-            padding: "8px 12px",
+            padding: "8px 14px",
             fontWeight: 700,
-            border: "1px solid #ddd",
+            border: "1px solid #666",
             borderRadius: 10,
-            background: view === "singles" ? "#eee" : "black",
+            background: view === "singles" ? "#ffffff" : "#111111",
+            color: view === "singles" ? "#000000" : "#ffffff",
+            cursor: "pointer",
           }}
         >
           Singles
         </button>
+
         <button
           onClick={() => setView("doubles")}
           style={{
-            padding: "8px 12px",
+            padding: "8px 14px",
             fontWeight: 700,
-            border: "1px solid #ddd",
+            border: "1px solid #666",
             borderRadius: 10,
-            background: view === "doubles" ? "#eee" : "black",
+            background: view === "doubles" ? "#ffffff" : "#111111",
+            color: view === "doubles" ? "#000000" : "#ffffff",
+            cursor: "pointer",
           }}
         >
           Doubles
         </button>
 
-        <div style={{ marginLeft: "auto", opacity: 0.85 }}>
+        <div style={{ marginLeft: "auto", opacity: 0.9 }}>
           <Link href="/submit">Submit a match →</Link>
-          <Link href="/matches" style={{ marginLeft: 12 }}>View matches →</Link>
+          <Link href="/matches" style={{ marginLeft: 12 }}>
+            View matches →
+          </Link>
         </div>
       </div>
 
@@ -104,11 +145,22 @@ export default function Home() {
               <th style={{ padding: 8 }}>Elo</th>
               <th style={{ padding: 8 }}>W–L</th>
               <th style={{ padding: 8 }}>Games</th>
+              <th style={{ padding: 8 }}>Tier</th>
             </tr>
           </thead>
           <tbody>
             {players.map((p, i) => {
-              const rating = view === "singles" ? p.singles_rating : p.doubles_rating;
+              const rating =
+                view === "singles" ? p.singles_rating : p.doubles_rating;
+
+              const wins =
+                view === "singles" ? p.singles_wins : p.doubles_wins;
+
+              const losses =
+                view === "singles" ? p.singles_losses : p.doubles_losses;
+
+              const games =
+                view === "singles" ? p.singles_games : p.doubles_games;
 
               return (
                 <tr key={p.id} style={{ borderTop: "1px solid #eee" }}>
@@ -118,9 +170,10 @@ export default function Home() {
                   </td>
                   <td style={{ padding: 8, fontWeight: 700 }}>{rating}</td>
                   <td style={{ padding: 8 }}>
-                    {p.wins}–{p.losses}
+                    {wins}–{losses}
                   </td>
-                  <td style={{ padding: 8 }}>{p.games_played}</td>
+                  <td style={{ padding: 8 }}>{games}</td>
+                  <td style={{ padding: 8 }}>{p.tier ?? "-"}</td>
                 </tr>
               );
             })}
