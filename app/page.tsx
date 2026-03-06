@@ -60,7 +60,19 @@ export default function Home() {
       .order("name", { ascending: true });
 
     if (!error && data) {
-      setPlayers(data as Player[]);
+
+      const sorted = (data as Player[]).sort((a, b) => {
+        const aGames = view === "singles" ? a.singles_games : a.doubles_games;
+        const bGames = view === "singles" ? b.singles_games : b.doubles_games;
+
+        if (aGames === 0 && bGames === 0) return 0;
+        if (aGames === 0) return 1;
+        if (bGames === 0) return -1;
+
+        return 0;
+      });
+
+      setPlayers(sorted);
     }
 
     setLoading(false);
@@ -167,7 +179,9 @@ export default function Home() {
                   <td style={{ padding: 8 }}>
                     <Link href={`/players/${p.id}`}>{p.name}</Link>
                   </td>
-                  <td style={{ padding: 8, fontWeight: 700 }}>{rating}</td>
+                  <td style={{ padding: 8, fontWeight: 700 }}>
+                    {games === 0 ? "Unranked" : rating}
+                  </td>
                   <td style={{ padding: 8 }}>
                     {wins}–{losses}
                   </td>
