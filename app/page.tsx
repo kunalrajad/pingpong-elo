@@ -145,7 +145,6 @@ export default function Home() {
               <th style={{ padding: 8 }}>Elo</th>
               <th style={{ padding: 8 }}>W–L</th>
               <th style={{ padding: 8 }}>Games</th>
-              <th style={{ padding: 8 }}>Tier</th>
             </tr>
           </thead>
           <tbody>
@@ -173,7 +172,6 @@ export default function Home() {
                     {wins}–{losses}
                   </td>
                   <td style={{ padding: 8 }}>{games}</td>
-                  <td style={{ padding: 8 }}>{p.tier ?? "-"}</td>
                 </tr>
               );
             })}
