@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 
 type Player = {
   id: string;
@@ -34,61 +35,73 @@ type MatchRow = {
   score_b: number | null;
 };
 
-export default function PlayerPage({ params }: { params: { id: string } }) {
+export default function PlayerPage() {
+  const params = useParams();
+  const playerId = params.id as string;
+
   const [player, setPlayer] = useState<Player | null>(null);
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [playersById, setPlayersById] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   async function load() {
+    if (!playerId) return;
+
     setLoading(true);
 
-    const [{ data: playerData }, { data: allPlayers }, { data: matchData, error: matchErr }] =
-      await Promise.all([
-        supabase
-          .from("players")
-          .select(`
-            id,
-            name,
-            singles_rating,
-            doubles_rating,
-            wins,
-            losses,
-            games_played,
-            singles_wins,
-            singles_losses,
-            singles_games,
-            doubles_wins,
-            doubles_losses,
-            doubles_games,
-            tier
-          `)
-          .eq("id", params.id)
-          .single(),
+    const [
+      { data: playerData, error: playerErr },
+      { data: allPlayers },
+      { data: matchData, error: matchErr },
+    ] = await Promise.all([
+      supabase
+        .from("players")
+        .select(`
+          id,
+          name,
+          singles_rating,
+          doubles_rating,
+          wins,
+          losses,
+          games_played,
+          singles_wins,
+          singles_losses,
+          singles_games,
+          doubles_wins,
+          doubles_losses,
+          doubles_games,
+          tier
+        `)
+        .eq("id", playerId)
+        .maybeSingle(),
 
-        supabase.from("players").select("id,name"),
+      supabase.from("players").select("id,name"),
 
-        supabase
-          .from("matches")
-          .select(`
-            id,
-            created_at,
-            match_type,
-            player_a,
-            player_b,
-            teammate_a,
-            teammate_b,
-            winner,
-            score_a,
-            score_b
-          `)
-          .or(
-            `player_a.eq.${params.id},player_b.eq.${params.id},teammate_a.eq.${params.id},teammate_b.eq.${params.id}`
-          )
-          .order("created_at", { ascending: false }),
-      ]);
+      supabase
+        .from("matches")
+        .select(`
+          id,
+          created_at,
+          match_type,
+          player_a,
+          player_b,
+          teammate_a,
+          teammate_b,
+          winner,
+          score_a,
+          score_b
+        `)
+        .or(
+          `player_a.eq.${playerId},player_b.eq.${playerId},teammate_a.eq.${playerId},teammate_b.eq.${playerId}`
+        )
+        .order("created_at", { ascending: false }),
+    ]);
 
-    setPlayer((playerData as Player) ?? null);
+    if (!playerErr) {
+      setPlayer((playerData as Player) ?? null);
+    } else {
+      setPlayer(null);
+    }
 
     const map: Record<string, string> = {};
     (allPlayers ?? []).forEach((p: any) => {
@@ -98,6 +111,8 @@ export default function PlayerPage({ params }: { params: { id: string } }) {
 
     if (!matchErr && matchData) {
       setMatches(matchData as MatchRow[]);
+    } else {
+      setMatches([]);
     }
 
     setLoading(false);
@@ -105,7 +120,7 @@ export default function PlayerPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     load();
-  }, [params.id]);
+  }, [playerId]);
 
   function name(id: string | null) {
     if (!id) return "";
@@ -133,13 +148,10 @@ export default function PlayerPage({ params }: { params: { id: string } }) {
     const teamAWon = m.winner === m.player_a;
     const winnerLabel = teamAWon ? teamA : teamB;
 
-    const playerWon =
-      isDoubles
-        ? (teamAWon &&
-            (m.player_a === params.id || m.teammate_a === params.id)) ||
-          (!teamAWon &&
-            (m.player_b === params.id || m.teammate_b === params.id))
-        : m.winner === params.id;
+    const playerWon = isDoubles
+      ? (teamAWon && (m.player_a === playerId || m.teammate_a === playerId)) ||
+        (!teamAWon && (m.player_b === playerId || m.teammate_b === playerId))
+      : m.winner === playerId;
 
     return (
       <div
